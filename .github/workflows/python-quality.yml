@@ -1,0 +1,81 @@
+name: Python Quality (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      python-versions:
+        description: 'JSON array of Python versions'
+        required: false
+        type: string
+        default: '["3.12", "3.13"]'
+      os:
+        description: 'JSON array of OS runners'
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
+
+permissions: read-all
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Run pre-commit
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd  # v3.0.1
+
+  tests:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+        os: ${{ fromJSON(inputs.os) }}
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@6b9c6063abd6010835644d4c2e1bef4cf5cd0fca  # v6.0.1
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run pytest
+        run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
+
+      - name: Upload to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
