@@ -1,0 +1,30 @@
+name: Block IDE/Agent Config Directories (Reusable)
+
+on:
+  workflow_call: {}
+
+permissions: read-all
+
+jobs:
+  block-ide-dirs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Reject .vscode and .claude directories
+        run: |
+          if git ls-files .vscode .claude | grep -q .; then
+            echo "::error::Supply chain risk: .vscode/ or .claude/ files must not be committed"
+            git ls-files .vscode .claude
+            exit 1
+          fi
