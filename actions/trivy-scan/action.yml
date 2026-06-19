@@ -1,0 +1,32 @@
+name: 'Trivy Container Scan'
+description: 'Scan a container image for vulnerabilities using Trivy'
+inputs:
+  image:
+    description: 'Container image to scan (e.g. ghcr.io/org/image:tag)'
+    required: true
+  severity:
+    description: 'Severity levels to report'
+    required: false
+    default: 'CRITICAL,HIGH'
+  exit-code:
+    description: 'Exit code when vulnerabilities are found (0 to not fail)'
+    required: false
+    default: '1'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5  # v0.30.0
+      with:
+        image-ref: ${{ inputs.image }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: ${{ inputs.severity }}
+        exit-code: ${{ inputs.exit-code }}
+
+    - name: Upload Trivy SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e  # v4.36.2
+      with:
+        sarif_file: trivy-results.sarif
