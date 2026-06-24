@@ -42,6 +42,6 @@ jobs:
         run: npm install @commitlint/cli @commitlint/config-conventional
 
       - name: Validate PR title
-        run: |
-          PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
-          echo "$PR_TITLE" | npx commitlint --config ${{ inputs.config_file }}
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | npx commitlint --config ${{ inputs.config_file }}
